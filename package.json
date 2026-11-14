@@ -1,0 +1,9 @@
+{
+  "name": "peixito-offline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jogo de peixes offline inspirado no Fishy",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,6 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Peixito — Oceano Pixel</title><link rel="stylesheet" href="style.css"></head><body>
+<canvas id="game" aria-label="Jogo Peixito"></canvas>
+<header class="hud"><div class="brand">🐟 <b>PEIXITO</b><span>OCEANO PIXEL</span></div><div class="stat"><small>SEU TAMANHO</small><strong id="size">10</strong></div><div class="stat"><small>PEIXES COMIDOS</small><strong id="eaten">0</strong></div><div class="stat"><small>RECORDE</small><strong id="best">0</strong></div><button id="pause" title="Pausar (P)">Ⅱ</button></header>
+<div class="tip">W A S D / SETAS para nadar <span>•</span> P para pausar <span>•</span> Coma apenas peixes com número menor</div>
+<div id="overlay" class="overlay"><section class="panel"><div class="eyebrow">✦ AVENTURA SUBAQUÁTICA ✦</div><h1 id="heading">PEIXITO</h1><p id="message">Coma os peixes menores, cresça e fuja dos maiores! O número acima de cada peixe indica seu tamanho.</p><div class="legend"><span><i class="dot green"></i> Menor: pode comer</span><span><i class="dot red"></i> Maior ou igual: perigo</span></div><button id="play" class="primary">▶ COMEÇAR A JOGAR</button><small>Jogo offline • sprites Pixel Reef Fish</small></section></div>
+<script src="game.js"></script></body></html>

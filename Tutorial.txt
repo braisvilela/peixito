@@ -1,0 +1,16 @@
+PEIXITO OFFLINE — COMO JOGAR
+
+1. Extraia o ZIP em uma pasta.
+2. Instale o Node.js se ainda não tiver.
+3. Abra o terminal dentro da pasta Peixito_Offline.
+4. Digite: npm start
+5. Abra http://localhost:3000 no navegador.
+
+Não precisa rodar npm install: o servidor usa somente recursos nativos do Node.js.
+Não precisa de internet.
+
+CONTROLES: WASD ou setas; P pausa; clique em Começar para jogar.
+Coma peixes com número menor que o seu. Números iguais ou maiores causam Game Over.
+Os sprites originais enviados estão em public/assets/fish.
+
+Para mudar a porta: no Windows CMD, use set PORT=3001 && npm start
