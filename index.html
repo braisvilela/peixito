@@ -1,0 +1,134 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Peixito — Oceano Canvas</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#042d48;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:white}canvas{display:block;width:100%;height:100%;image-rendering:auto}.hud{position:fixed;z-index:2;left:20px;right:20px;top:16px;display:flex;gap:12px;align-items:center;pointer-events:none}.brand,.stat,#pause{background:#062a42d9;border:1px solid #8be5ff40;box-shadow:0 8px 24px #001c3160;border-radius:14px;padding:10px 16px;backdrop-filter:blur(8px)}.brand{font-size:20px;letter-spacing:1px;white-space:nowrap}.brand span{display:block;font-size:9px;letter-spacing:2.8px;color:#85d9ed;margin-left:30px}.stat{min-width:112px;text-align:center}.stat small{display:block;color:#9ad8e7;font-size:10px;letter-spacing:1px}.stat strong{font-size:23px;color:#fff}#pause{margin-left:auto;color:#fff;font-size:20px;cursor:pointer;pointer-events:auto}.tip{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#062a42c9;border:1px solid #a8e5f533;border-radius:40px;padding:10px 20px;z-index:2;font-size:12px;color:#d0f3fa;white-space:nowrap}.tip span{color:#65d2e8;margin:0 8px}.overlay{position:fixed;inset:0;z-index:4;background:#001b30a8;display:flex;justify-content:center;align-items:center;padding:20px;backdrop-filter:blur(4px)}.overlay.hidden{display:none}.panel{width:min(460px,100%);padding:36px 32px 28px;border-radius:24px;background:linear-gradient(145deg,#0b4d6c,#06293e);border:1px solid #7ce6ff78;text-align:center;box-shadow:0 20px 80px #001320a8}.eyebrow{color:#89e6f5;font-size:12px;letter-spacing:3px;font-weight:800}h1{font-size:clamp(44px,8vw,72px);margin:8px 0 12px;color:#fff;text-shadow:0 5px #0082a5;letter-spacing:4px}.panel p{color:#d4eff7;line-height:1.65}.legend{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;font-size:12px;margin:22px 0}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}.green{background:#63edaa}.red{background:#ff777d}.primary{background:#ffcf65;border:0;border-radius:12px;padding:16px 30px;font-weight:900;font-size:15px;color:#143b4b;cursor:pointer;box-shadow:0 6px #bb8c37}.primary:hover{filter:brightness(1.08)}.panel>small{display:block;margin-top:23px;color:#a7d2df}@media(max-width:650px){.hud{left:8px;right:8px;top:8px;gap:5px}.brand{font-size:13px;padding:8px}.brand span{font-size:7px;margin-left:0}.stat{min-width:0;flex:1;padding:8px 3px}.stat small{font-size:7px}.stat strong{font-size:16px}#pause{padding:7px 10px}.tip{font-size:9px;padding:8px 10px;bottom:8px}.panel{padding:25px 16px}}
+.panel{max-height:94dvh;overflow:auto}.chooser{margin:12px 0 20px;padding:12px;border:1px solid #8be5ff40;border-radius:16px;background:#042c43aa}.chooser h2{font-size:15px;margin:0 0 4px}.chooser canvas{width:100%;height:100px}.choices{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin:8px 0}.choices button{cursor:pointer;border:2px solid transparent;border-radius:9px;color:white;background:#16536b;padding:7px 9px;font:600 12px system-ui}.choices button[aria-pressed=true]{border-color:#ffdf82;box-shadow:0 0 0 2px #ffdf8233}.choices .swatch{width:29px;height:29px;padding:0;background:var(--swatch)}.chooser small{color:#a7d2df;font-size:11px}.chooser[hidden]{display:none}.panel h1{margin-top:4px}.panel p{margin:8px 0}.legend{margin:12px 0}
+</style></head><body>
+<canvas id="game" aria-label="Jogo Peixito"></canvas>
+<header class="hud"><div class="brand">🐟 <b>PEIXITO</b><span>OCEANO CANVAS</span></div><div class="stat"><small>SEU TAMANHO</small><strong id="size">10</strong></div><div class="stat"><small>PEIXES COMIDOS</small><strong id="eaten">0</strong></div><div class="stat"><small>RECORDE</small><strong id="best">0</strong></div><button id="pause" title="Pausar (P)">Ⅱ</button></header>
+<div class="tip">W A S D / SETAS para nadar <span>•</span> ESPAÇO: turbo (-2 tamanho/s) <span>•</span> P: pausa</div>
+<div id="overlay" class="overlay"><section class="panel"><div class="eyebrow">✦ AVENTURA SUBAQUÁTICA ✦</div><h1 id="heading">PEIXITO</h1><p id="message">Coma os peixes menores, cresça e fuja dos maiores! O número acima de cada peixe indica seu tamanho. Segure Espaço enquanto nada para acelerar, gastando tamanho até o mínimo de 3.</p><div class="legend"><span><i class="dot green"></i> Menor: pode comer</span><span><i class="dot red"></i> Maior ou igual: perigo</span></div><div class="chooser" id="chooser"><h2>Escolha seu peixe</h2><canvas id="preview" width="320" height="100" aria-label="Prévia animada do peixe"></canvas><small>Cor</small><div id="colors" class="choices"></div><small>Estampa</small><div id="patterns" class="choices"></div></div><button id="play" class="primary">▶ COMEÇAR A JOGAR</button><small>Jogo offline • gráficos HTML5 Canvas</small></section></div>
+<script>
+(() => {
+'use strict';
+const canvas = document.querySelector('#game'); let ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
+const keys = new Set();
+let W=0,H=0,dpr=1,fish=[],bubbles=[],plants=[],particles=[],trails=[];
+let state='menu', player, eaten=0, best=0, elapsed=0, spawnClock=0, last=0, bgTime=0;
+const rand=(a,b)=>a+Math.random()*(b-a), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+try {best=Number(localStorage.getItem('peixito-best'))||0;}catch{}
+$('best').textContent=best;
+function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);makeDecor();if(player){player.x=clamp(player.x,35,W-35);player.y=clamp(player.y,100,H-40);}}
+function makeDecor(){plants=Array.from({length:Math.ceil(W/60)},(_,i)=>({x:i*65+rand(-25,25),h:rand(30,100),phase:rand(0,7),tone:Math.random()}));bubbles=Array.from({length:Math.max(28,Math.floor(W*H/20000))},()=>({x:rand(0,W),y:rand(0,H),r:rand(1,4),speed:rand(10,32),phase:rand(0,7)}));}
+addEventListener('resize',resize);resize();
+const palette=[190,165,265,320,48,105,210,350,135];
+const skinColors=[32,...palette], skinNames=['Laranja','Azul turquesa','Verde água','Roxo','Rosa','Dourado','Verde','Azul','Vermelho','Esmeralda'];
+const patternNames=['Clássico','Listrado','Pintado','Bicolor','Multicolorido'];
+let skin={hue:32,variant:0};try{const saved=JSON.parse(localStorage.getItem('peixito-skin'));if(saved&&skinColors.includes(saved.hue)&&Number.isInteger(saved.variant)&&saved.variant>=0&&saved.variant<5)skin=saved;}catch{}
+function selectSkin(){for(const b of $('colors').children)b.setAttribute('aria-pressed',String(Number(b.dataset.value)===skin.hue));for(const b of $('patterns').children)b.setAttribute('aria-pressed',String(Number(b.dataset.value)===skin.variant));try{localStorage.setItem('peixito-skin',JSON.stringify(skin));}catch{}if(state==='menu'&&player)Object.assign(player,skin);}
+function addChoice(parent,value,name,isColor){const b=document.createElement('button');b.type='button';b.dataset.value=value;b.title=name;b.setAttribute('aria-label',name);if(isColor){b.className='swatch';b.style.setProperty('--swatch',`hsl(${value} 78% 55%)`);}else b.textContent=name;b.addEventListener('click',()=>{skin[isColor?'hue':'variant']=value;selectSkin();});$(parent).append(b);}
+skinColors.forEach((h,i)=>addChoice('colors',h,skinNames[i],true));patternNames.forEach((n,i)=>addChoice('patterns',i,n,false));selectSkin();
+function pickHue(){return palette[Math.floor(Math.random()*palette.length)];}
+function reset(){player={x:W*.45,y:H*.5,size:10,vx:0,vy:0,dir:1,...skin,invuln:0,turboCost:0,turboTrail:0};fish=[];particles=[];trails=[];eaten=0;elapsed=0;spawnClock=0;for(let i=0;i<Math.min(18,Math.floor(W/65)+7);i++)spawn(true);updateHud();}
+function updateHud(){$('size').textContent=player.size;$('eaten').textContent=eaten;$('best').textContent=best;}
+function spawn(initial=false){if(!player||fish.length>=Math.min(48,Math.max(20,Math.floor(W/30))))return;
+ const smaller=Math.random()<.58;
+ let size=smaller?Math.max(1,Math.round(player.size*rand(.20,.90))):Math.round(player.size*rand(1.12,2.35));
+ size=Math.max(1,size);
+ const side=Math.random()<.5?-1:1;
+ const speed=rand(34,83)*(1+Math.min(elapsed/200,1));
+ const x=initial?rand(0,W):(side<0?-90:W+90);
+ const y=rand(105,Math.max(125,H-65));
+ fish.push({x,y,size,hue:pickHue(),variant:Math.floor(rand(0,5)),dir:side<0?1:-1,vx:(side<0?1:-1)*speed,vy:rand(-8,8),wave:rand(0,7),phase:rand(0,7)});
+}
+function radius(size){return clamp(18+Math.sqrt(size)*5.8,22,104);}
+function drawFish(f,isPlayer=false,preview=false){const r=radius(f.size), w=r*2.05,h=r*1.75;
+ ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir,1);
+ // One procedural silhouette, shared by every fish.
+ const hue=f.hue??32, t=bgTime*(f.boosting?23:11)+(f.phase||0), wag=Math.sin(t)*.32, variant=f.variant||0;
+ ctx.scale(r,r);ctx.lineJoin='round';ctx.lineCap='round';
+ const tone=(l,s=78)=>`hsl(${hue} ${s}% ${l}%)`;
+ ctx.strokeStyle=tone(28);ctx.lineWidth=.045;
+ // Tail and fins, animated independently of the body.
+ ctx.save();ctx.translate(-.53,0);ctx.rotate(wag);ctx.scale(.78+.22*Math.cos(t),1);
+ ctx.fillStyle=tone(46);ctx.beginPath();ctx.moveTo(.04,0);ctx.quadraticCurveTo(-.28,-.12,-.52,-.43);ctx.quadraticCurveTo(-.65,0,-.52,.43);ctx.quadraticCurveTo(-.28,.12,.04,0);ctx.fill();ctx.stroke();ctx.restore();
+ ctx.fillStyle=tone(48);ctx.beginPath();ctx.moveTo(-.38,-.29);ctx.quadraticCurveTo(-.23,-.69,.13,-.49);ctx.lineTo(.32,-.25);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-.27,.29);ctx.quadraticCurveTo(-.12,.56,.22,.36);ctx.lineTo(.25,.23);ctx.closePath();ctx.fill();ctx.stroke();
+ const grad=ctx.createLinearGradient(0,-.45,0,.45);grad.addColorStop(0,tone(76));grad.addColorStop(.48,tone(58));grad.addColorStop(1,tone(40));
+ ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(.08,0,.72,.43,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.save();ctx.beginPath();ctx.ellipse(.08,0,.70,.41,0,0,Math.PI*2);ctx.clip();
+ if(variant===1){ctx.strokeStyle=tone(25);ctx.globalAlpha=.35;ctx.lineWidth=.13;for(let x=-.42;x<.3;x+=.25){ctx.beginPath();ctx.moveTo(x,-.5);ctx.quadraticCurveTo(x+.19,0,x-.03,.5);ctx.stroke();}}
+ if(variant===2){ctx.fillStyle=tone(90);ctx.globalAlpha=.65;for(let i=0;i<8;i++){ctx.beginPath();ctx.arc(-.48+(i%4)*.21,-.18+Math.floor(i/4)*.32,.055+(i%2)*.025,0,7);ctx.fill();}}
+ if(variant===3){ctx.fillStyle=tone(92);ctx.globalAlpha=.65;ctx.beginPath();ctx.ellipse(.03,.29,.75,.23,0,0,7);ctx.fill();ctx.fillStyle=tone(28);ctx.fillRect(-.7,-.06,1.5,.08);}
+ if(variant===4){ctx.fillStyle=`hsl(${(hue+65)%360} 85% 55%)`;ctx.globalAlpha=.65;ctx.beginPath();ctx.ellipse(-.47,0,.42,.48,-.3,0,7);ctx.fill();}
+ ctx.restore();
+ ctx.fillStyle='#ffffff38';ctx.beginPath();ctx.ellipse(-.08,-.23,.37,.085,-.13,0,Math.PI*2);ctx.fill();
+ ctx.save();ctx.translate(-.12,.12);ctx.rotate(Math.sin(t)*.22);ctx.fillStyle=tone(43);ctx.beginPath();ctx.moveTo(.13,-.08);ctx.quadraticCurveTo(-.35,-.15,-.32,.16);ctx.quadraticCurveTo(-.05,.27,.13,-.08);ctx.fill();ctx.stroke();ctx.restore();
+ ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(.42,-.10,.155,.18,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#102b40';ctx.beginPath();ctx.arc(.47,-.09,.084,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(.49,-.125,.027,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle=tone(25);ctx.lineWidth=.035;ctx.beginPath();ctx.moveTo(.58,.15);ctx.quadraticCurveTo(.68,.20,.74,.11);ctx.stroke();
+ ctx.restore();
+ if(preview)return;
+ const good=isPlayer?null:f.size<player.size;
+ const color=isPlayer?'#ffe887':good?'#8afbc1':'#ff9da0';
+ ctx.font=`900 ${isPlayer?17:14}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+ const tx=f.x,ty=f.y-h*.44-13;
+ const text=String(f.size), tw=ctx.measureText(text).width;
+ ctx.fillStyle='#06283ee0';roundRect(tx-tw/2-10,ty-12,tw+20,24,9);ctx.fill();
+ ctx.strokeStyle=isPlayer?'#ffe88780':good?'#70efaa70':'#ff858570';ctx.lineWidth=1;ctx.stroke();
+ ctx.fillStyle=color;ctx.fillText(text,tx,ty+1);
+ if(isPlayer){ctx.fillStyle='#fff';ctx.font='bold 10px system-ui';ctx.fillText('VOCÊ',f.x,ty-24);}
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function splash(x,y,color){for(let i=0;i<12;i++){const a=rand(0,Math.PI*2),s=rand(25,120);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(.3,.7),max:.7,color});}}
+function update(dt){bgTime+=dt;for(const b of bubbles){b.y-=b.speed*dt;b.x+=Math.sin(bgTime+b.phase)*6*dt;if(b.y<-10){b.y=H+10;b.x=rand(0,W);}}
+ for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}particles=particles.filter(p=>p.life>0);
+ for(const b of trails){b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}trails=trails.filter(b=>b.life>0);
+ if(state!=='playing')return;
+ elapsed+=dt;spawnClock+=dt;if(spawnClock>.55){spawnClock=0;spawn();}
+ let ax=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
+ let ay=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
+ const len=Math.hypot(ax,ay)||1;ax/=len;ay/=len;
+ const boosting=keys.has(' ') && (ax!==0||ay!==0) && player.size>3;
+ if(boosting){
+ player.turboCost+=dt*2;
+ while(player.turboCost>=1 && player.size>3){player.turboCost-=1;player.size--;updateHud();}
+
+ }
+ player.boosting=boosting;
+ const speed=clamp(270-Math.sqrt(player.size)*3.5,135,260)*(boosting?1.8:1);
+ $('size').style.color=boosting?'#ffe17b':'';
+ const easing=Math.min(1,dt*9);
+ player.vx+=(ax*speed-player.vx)*easing;player.vy+=(ay*speed-player.vy)*easing;
+ player.x=clamp(player.x+player.vx*dt,22,W-22);player.y=clamp(player.y+player.vy*dt,96,H-35);
+ if(ax!==0)player.dir=ax>0?1:-1;
+ function trail(f,fast=false){if(Math.hypot(f.vx||0,f.vy||0)<12)return;f.trailClock=(f.trailClock||0)+dt;if(f.trailClock<(fast?.035:.19))return;f.trailClock=0;const r=radius(f.size);trails.push({x:f.x-f.dir*r*.95,y:f.y+rand(-r*.15,r*.15),vx:-f.vx*.14+rand(-9,9),vy:-rand(12,30),r:rand(2,fast?7:4),life:.85,max:.85});}trail(player,boosting);
+ for(const f of fish){f.wave+=dt*2;f.x+=f.vx*dt;f.y+=Math.sin(f.wave+f.phase)*8*dt;trail(f);}
+ fish=fish.filter(f=>f.x>-160&&f.x<W+160);
+ const pr=radius(player.size)*.49;
+ for(let i=fish.length-1;i>=0;i--){const f=fish[i];const fr=radius(f.size)*.48;
+ if(Math.hypot(player.x-f.x,player.y-f.y)<(pr+fr)*.78){
+ if(f.size<player.size){fish.splice(i,1);eaten++;player.size+=Math.max(1,Math.round(f.size*.20));splash(f.x,f.y,'#a7ffe1');if(eaten>best){best=eaten;try{localStorage.setItem('peixito-best',best);}catch{}}updateHud();}
+ else{state='dead';splash(player.x,player.y,'#ffb3a1');show('FIM DE JOGO',`Você comeu ${eaten} peixes e chegou ao tamanho ${player.size}. Tente novamente!`,'↻ JOGAR NOVAMENTE');break;}
+ }}
+}
+function background(){const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#0a6685');sky.addColorStop(.5,'#08617d');sky.addColorStop(1,'#06354f');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#b8faff0b';for(let i=0;i<7;i++){const x=(i+.5)*W/7+Math.sin(bgTime*.2+i)*35;ctx.beginPath();ctx.moveTo(x-25,0);ctx.lineTo(x+35,0);ctx.lineTo(x+140,H);ctx.lineTo(x+10,H);ctx.fill();}
+ for(const b of bubbles){ctx.strokeStyle='#c8faff35';ctx.lineWidth=1;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.stroke();}
+ ctx.fillStyle='#0a4d59';ctx.beginPath();ctx.moveTo(0,H-45);for(let x=0;x<=W+20;x+=20)ctx.lineTo(x,H-44+Math.sin(x*.025)*8);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+ for(const p of plants){const x=p.x,y=H-35;ctx.strokeStyle=p.tone>.5?'#167c70':'#15918a';ctx.lineWidth=5;ctx.lineCap='round';for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+Math.sin(bgTime*.8+p.phase+k)*18,y-p.h*.5,x+(k-1)*12+Math.sin(bgTime*.8+p.phase)*12,y-p.h*(.7+k*.15));ctx.stroke();}}
+ ctx.fillStyle='#b59a6870';for(let x=0;x<W;x+=80){ctx.beginPath();ctx.ellipse(x+Math.sin(x)*12,H-12,randStatic(x,15,35),7,0,0,Math.PI*2);ctx.fill();}
+}
+function randStatic(seed,a,b){return a+(Math.abs(Math.sin(seed*12.9898))*10000%1)*(b-a);}
+function render(){ctx.clearRect(0,0,W,H);background();for(const b of trails){ctx.globalAlpha=clamp(b.life/b.max,0,1)*.75;ctx.strokeStyle='#b9f5ff';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(b.x,b.y,b.r+(1-b.life/b.max)*2,0,7);ctx.stroke();ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.35,1,0,7);ctx.fill();}ctx.globalAlpha=1;const order=[...fish].sort((a,b)=>a.size-b.size);for(const f of order)drawFish(f);if(player&&state!=='dead')drawFish(player,true);for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,randStatic(p.x+p.y,2,5),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}}
+function renderPreview(){if($('chooser').hidden||$('overlay').classList.contains('hidden'))return;const old=ctx;ctx=$('preview').getContext('2d');try{ctx.clearRect(0,0,320,100);drawFish({x:160,y:50+Math.sin(bgTime*2)*3,size:65,dir:1,...skin},true,true);}finally{ctx=old;}}
+function loop(now){const dt=Math.min((now-last)/1000||0,.045);last=now;update(dt);render();renderPreview();requestAnimationFrame(loop);}
+function show(title,message,button){$('chooser').hidden=state==='paused';$('heading').textContent=title;$('message').textContent=message;$('play').textContent=button;$('overlay').classList.remove('hidden');}
+function start(){keys.clear();$('size').style.color='';reset();state='playing';$('overlay').classList.add('hidden');}
+function togglePause(){if(state==='playing'){state='paused';show('PAUSADO','O oceano está esperando por você.','▶ CONTINUAR');}else if(state==='paused'){state='playing';$('overlay').classList.add('hidden');}}
+$('play').addEventListener('click',()=>{if(state==='paused')togglePause();else start();});$('pause').addEventListener('click',togglePause);
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();keys.add(k);if(k==='p'&&!e.repeat)togglePause();if(k==='enter'&&state==='menu')start();});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());
+player={x:W*.45,y:H*.52,size:10,dir:1,...skin};for(let i=0;i<15;i++)spawn(true);
+requestAnimationFrame(loop);
+})();
+</script></body></html>
